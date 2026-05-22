@@ -12,16 +12,27 @@ git clone https://github.com/schoperena/dotfiles "$env:USERPROFILE\.dotfiles"; &
 
 ## ¿Qué instala?
 
-| Componente | Origen |
-|---|---|
-| **oh-my-posh** | winget (`JanDeDobbeleer.OhMyPosh`) |
-| **ImageMagick** | winget (`ImageMagick.Q16-HDRI`) |
-| **Terminal-Icons** | PSGallery |
-| **ps2exe** | PSGallery |
-| **ImgConv** | este repo (`Modules/ImgConv/`) |
-| **Temas OMP** | este repo (`night-owl`, `quick-term`, `.mytheme`) |
-| **Scripts** | este repo (`CustomScripts/`) |
-| **Perfil** | este repo (`Documents/PowerShell/Microsoft.PowerShell_profile.ps1`) |
+El script pide selección interactiva para navegadores y herramientas AI. El resto se instala siempre.
+
+| Componente | Origen | Selección |
+|---|---|---|
+| **Git** | winget | siempre |
+| **GitHub CLI** | winget | siempre |
+| **oh-my-posh** | winget | siempre |
+| **ImageMagick** | winget | siempre |
+| **VLC** | winget | siempre |
+| **Visual Studio Code** | winget | siempre |
+| **NanaZip** | winget | siempre |
+| **WhatsApp** | Microsoft Store | siempre |
+| **Chrome / Brave / Firefox / LibreWolf** | winget | multi-selección |
+| **Claude Desktop** | winget | multi-selección |
+| **Claude Code** | npm | multi-selección |
+| **Codex CLI** | npm | multi-selección |
+| **Terminal-Icons** | PSGallery | siempre |
+| **ps2exe** | PSGallery | siempre |
+| **ImgConv** | este repo | siempre |
+| **Temas OMP** | este repo | siempre |
+| **Perfil + Scripts** | este repo | siempre |
 
 ## Estructura
 
@@ -56,3 +67,17 @@ dotfiles/
 |---|---|
 | `toolbox` | Abre el hub de scripts personales |
 | `ImgConv` | Convierte imágenes (HEIC, PNG, JPG, etc.) |
+
+## Scripts en `toolbox`
+
+| Script | Descripción |
+|---|---|
+| `MenuScripts.ps1` | Este mismo hub |
+| `New-SSHKey.ps1` | Genera clave SSH (Ed25519 o RSA 4096) para GitHub/GitLab |
+| `FormatearDisco.ps1` | Formatea discos externos (NTFS / exFAT / FAT32) — requiere Admin |
+| `deblotear_TCL10L.ps1` | Elimina bloatware del TCL 10L vía ADB |
+| `renombrar_timelapse.ps1` | Renombra imágenes de timelapse en secuencia numérica |
+| `stirling-sch.ps1` | Instala Stirling-PDF apuntando al servidor interno |
+| `tree.ps1` | Muestra árbol de directorios |
+| `verify-checksum.ps1` | Verifica checksum SHA256/SHA1/MD5 de un archivo |
+| `win11_rpd_patch.ps1` | Parche para habilitar RDP en Windows 11 Home |
