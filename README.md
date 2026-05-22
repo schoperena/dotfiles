@@ -34,31 +34,34 @@ El script pide selección interactiva para navegadores y herramientas AI. El res
 | **Temas OMP** | este repo | siempre |
 | **Perfil + Scripts** | este repo | siempre |
 
-## Estructura
+## Estructura del repo y destinos de instalación
 
 ```
-dotfiles/
-├── Documents/
-│   └── PowerShell/
-│       ├── Microsoft.PowerShell_profile.ps1
-│       ├── night-owl.omp.json        ← tema activo
-│       ├── quick-term.omp.json
-│       ├── .mytheme.omp.json
-│       ├── powershell.config.json
-│       └── CustomScripts/
-│           ├── MenuScripts.ps1       ← lanzar con: toolbox
-│           ├── FormatearDisco.ps1
-│           ├── deblotear_TCL10L.ps1
-│           ├── renombrar_timelapse.ps1
-│           ├── stirling-sch.ps1
-│           ├── tree.ps1
-│           ├── verify-checksum.ps1
-│           ├── win11_rpd_patch.ps1
-│           ├── BloquearAdobe.bat
-│           ├── calc_digito_de_verificacion.py
-│           └── procesar_notebook.py
-└── Modules/
-    └── ImgConv/                      ← conversor de imágenes con ImageMagick
+dotfiles/                                  destino en el equipo
+├── powershell/
+│   ├── profile.ps1              →  $PROFILE
+│   ├── powershell.config.json   →  ~\Documents\PowerShell\
+│   └── themes/
+│       ├── night-owl.omp.json   →  ~\Documents\PowerShell\          ← tema activo
+│       ├── quick-term.omp.json  →  ~\Documents\PowerShell\
+│       └── mytheme.omp.json     →  ~\Documents\PowerShell\.mytheme.omp.json
+├── scripts/                     →  ~\Documents\PowerShell\CustomScripts\
+│   ├── MenuScripts.ps1                    (toolbox)
+│   ├── New-SSHKey.ps1
+│   ├── FormatearDisco.ps1
+│   ├── deblotear_TCL10L.ps1
+│   ├── renombrar_timelapse.ps1
+│   ├── stirling-sch.ps1
+│   ├── tree.ps1
+│   ├── verify-checksum.ps1
+│   ├── win11_rpd_patch.ps1
+│   ├── BloquearAdobe.bat
+│   ├── calc_digito_de_verificacion.py
+│   └── procesar_notebook.py
+├── modules/
+│   └── ImgConv/                 →  ~\Documents\PowerShell\Modules\ImgConv\
+├── setup.ps1
+└── README.md
 ```
 
 ## Comandos rápidos
