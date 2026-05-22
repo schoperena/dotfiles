@@ -138,6 +138,18 @@ function Install-NpmPkg {
     Write-OK $Name
 }
 
+function Test-PkgInstalled {
+    param([hashtable]$Item)
+    if ($Item.type -eq 'winget') {
+        return [bool](winget list --id $Item.id --accept-source-agreements 2>&1 | Select-String $Item.id)
+    }
+    if ($Item.type -eq 'npm') {
+        if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { return $false }
+        return [bool](npm list -g --depth=0 2>$null | Select-String ([regex]::Escape($Item.id)))
+    }
+    return $false
+}
+
 function Install-FiraCodeNerdFont {
     $userFontsDir = "$env:LOCALAPPDATA\Microsoft\Windows\Fonts"
     $fontDest     = "$userFontsDir\FiraCodeNerdFont-Regular.ttf"
@@ -259,7 +271,8 @@ Write-Host "  ╔═════════════════════
 Write-Host "  ║   schoperena dotfiles — Setup            ║" -ForegroundColor Cyan
 Write-Host "  ╚══════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
-Start-Sleep -Seconds 1
+Write-Host "  Verificando paquetes ya instalados..." -ForegroundColor DarkGray
+Write-Host ""
 
 $browserItems = @(
     @{ label = 'Google Chrome';   id = 'Google.Chrome';      type = 'winget' }
@@ -274,8 +287,26 @@ $aiItems = @(
     @{ label = 'Codex CLI (OpenAI)';         id = '@openai/codex';             type = 'npm'    }
 )
 
-$selectedBrowsers = Show-MultiSelect -Title 'Navegadores — ¿Cuales instalar?' -Items $browserItems
-$selectedAI       = Show-MultiSelect -Title 'Herramientas AI — ¿Cuales instalar?' -Items $aiItems
+# Filtrar paquetes ya instalados antes de mostrar el menu
+$browsersToShow = @($browserItems | Where-Object { -not (Test-PkgInstalled $_) })
+$aiToShow       = @($aiItems       | Where-Object { -not (Test-PkgInstalled $_) })
+
+$selectedBrowsers = @()
+$selectedAI       = @()
+
+if ($browsersToShow.Count -gt 0) {
+    $selectedBrowsers = Show-MultiSelect -Title 'Navegadores — ¿Cuales instalar?' -Items $browsersToShow
+} else {
+    Write-Host "  Navegadores: todos ya instalados, se omite seleccion." -ForegroundColor DarkGray
+    Start-Sleep -Milliseconds 800
+}
+
+if ($aiToShow.Count -gt 0) {
+    $selectedAI = Show-MultiSelect -Title 'Herramientas AI — ¿Cuales instalar?' -Items $aiToShow
+} else {
+    Write-Host "  Herramientas AI: todas ya instaladas, se omite seleccion." -ForegroundColor DarkGray
+    Start-Sleep -Milliseconds 800
+}
 
 Clear-Host
 
