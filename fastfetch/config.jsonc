@@ -1,0 +1,82 @@
+{
+  // fastfetch config — schoperena
+  // Destino: %APPDATA%\fastfetch\config.jsonc
+  // La bateria solo aparece si el equipo tiene una (laptops). En equipos sin
+  // bateria el modulo se oculta automaticamente gracias a moduleErrors: false.
+  "display": {
+    "separator": "  ❯  ",
+    "keyWidth": 13,
+    "color": {
+      "keys":  "36",  // cyan
+      "title": "96"   // bright cyan
+    },
+    "moduleErrors": false
+  },
+  "modules": [
+    "title",
+    "separator",
+    {
+      "type": "os",
+      "key":  "OS"
+    },
+    {
+      "type": "host",
+      "key":  "Modelo"
+    },
+    {
+      "type": "kernel",
+      "key":  "Kernel"
+    },
+    {
+      "type": "uptime",
+      "key":  "Uptime"
+    },
+    {
+      "type": "packages",
+      "key":  "Paquetes"
+    },
+    {
+      "type": "shell",
+      "key":  "Shell"
+    },
+    {
+      "type": "terminal",
+      "key":  "Terminal"
+    },
+    {
+      "type": "display",
+      "key":  "Pantalla"
+    },
+    {
+      "type": "cpu",
+      "key":  "CPU"
+    },
+    {
+      "type": "gpu",
+      "key":  "GPU"
+    },
+    {
+      "type": "memory",
+      "key":  "RAM"
+    },
+    {
+      "type": "disk",
+      "key":     "Disco",
+      "folders": ["C:\\"]
+    },
+    {
+      // Solo aparece si hay bateria (laptop). En escritorio se oculta.
+      "type":       "battery",
+      "key":        "Batería",
+      "format":     "{2}% {1}"
+    },
+    {
+      "type":             "localip",
+      "key":              "IP Local",
+      "showIpv6":         false,
+      "defaultRouteOnly": true
+    },
+    "break",
+    "colors"
+  ]
+}

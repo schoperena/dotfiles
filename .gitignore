@@ -1,0 +1,18 @@
+# Backups generados por setup.ps1
+*.bak_*
+
+# Binarios (no deben estar en el repo)
+*.exe
+*.msi
+*.dll
+
+# Scripts Linux (no aplican en Windows, ignorar si se cuelan)
+*.sh
+
+# Sistema operativo
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Logs
+*.log

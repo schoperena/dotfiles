@@ -17,11 +17,12 @@ $csDir    = "$psDir\CustomScripts"
 # ─── Mapa de despliegue ───────────────────────────────────────────────────────
 # Cada entrada: repo (ruta relativa en el repo) → machine (ruta absoluta destino)
 $deployFiles = @(
-    @{ repo = 'powershell/profile.ps1';              machine = $PROFILE }
-    @{ repo = 'powershell/powershell.config.json';   machine = "$psDir\powershell.config.json" }
-    @{ repo = 'powershell/themes/night-owl.omp.json'; machine = "$psDir\night-owl.omp.json" }
+    @{ repo = 'powershell/profile.ps1';                machine = $PROFILE }
+    @{ repo = 'powershell/powershell.config.json';     machine = "$psDir\powershell.config.json" }
+    @{ repo = 'powershell/themes/night-owl.omp.json';  machine = "$psDir\night-owl.omp.json" }
     @{ repo = 'powershell/themes/quick-term.omp.json'; machine = "$psDir\quick-term.omp.json" }
-    @{ repo = 'powershell/themes/mytheme.omp.json';   machine = "$psDir\.mytheme.omp.json" }
+    @{ repo = 'powershell/themes/mytheme.omp.json';    machine = "$psDir\.mytheme.omp.json" }
+    @{ repo = 'fastfetch/config.jsonc';                machine = "$env:APPDATA\fastfetch\config.jsonc" }
 )
 
 # Scripts que van todos a CustomScripts\
@@ -164,10 +165,11 @@ Clear-Host
 
 # ── 2a. Dependencias de desarrollo (siempre) ──────────────────────────────────
 Write-Step "Dependencias de desarrollo"
-Install-WingetPkg 'Git.Git'                 'Git'
-Install-WingetPkg 'GitHub.cli'              'GitHub CLI'
-Install-WingetPkg 'JanDeDobbeleer.OhMyPosh' 'oh-my-posh'
-Install-WingetPkg 'ImageMagick.Q16-HDRI'   'ImageMagick'
+Install-WingetPkg 'Git.Git'                   'Git'
+Install-WingetPkg 'GitHub.cli'                'GitHub CLI'
+Install-WingetPkg 'JanDeDobbeleer.OhMyPosh'  'oh-my-posh'
+Install-WingetPkg 'ImageMagick.Q16-HDRI'     'ImageMagick'
+Install-WingetPkg 'Fastfetch-cli.Fastfetch'  'fastfetch'
 
 if ($selectedAI | Where-Object { $_.type -eq 'npm' }) {
     Install-WingetPkg 'OpenJS.NodeJS.LTS' 'Node.js LTS'
@@ -208,7 +210,7 @@ foreach ($mod in @('Terminal-Icons', 'ps2exe')) {
 # ═══════════════════════════════════════════════════════════════════════════════
 
 Write-Step "Creando estructura de directorios"
-New-Item -ItemType Directory -Path $psDir, $modDir, $csDir -Force | Out-Null
+New-Item -ItemType Directory -Path $psDir, $modDir, $csDir, "$env:APPDATA\fastfetch" -Force | Out-Null
 Write-OK $psDir
 
 # ── 3a. Perfil, config y temas ────────────────────────────────────────────────

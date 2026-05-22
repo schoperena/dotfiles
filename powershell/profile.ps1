@@ -16,3 +16,6 @@ function toolbox {
     & "$_ProfileDir\CustomScripts\MenuScripts.ps1"
     Set-Location $lugarOriginal
 }
+
+# Fastfetch al abrir terminal (solo si esta instalado)
+if (Get-Command fastfetch -ErrorAction SilentlyContinue) { fastfetch }
