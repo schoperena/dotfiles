@@ -4,11 +4,20 @@ Configuración personal de PowerShell: prompt, módulos, temas y scripts.
 
 ## Setup en un equipo nuevo
 
+No necesitas `git`. Abre **Windows PowerShell** (el que viene con Windows 11) y ejecuta:
+
 ```powershell
-git clone https://github.com/schoperena/dotfiles "$env:USERPROFILE\.dotfiles"; & "$env:USERPROFILE\.dotfiles\setup.ps1"
+& ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/schoperena/dotfiles/main/setup.ps1')))
 ```
 
-> Requiere PowerShell 7+ y `winget` instalado (viene con Windows 11).
+El script detecta automáticamente si estás en PowerShell 5.1, instala PowerShell 7 con `winget` y se relanza en él.
+
+Si prefieres clonar el repo primero:
+
+```powershell
+git clone https://github.com/schoperena/dotfiles "$env:USERPROFILE\.dotfiles"
+& "$env:USERPROFILE\.dotfiles\setup.ps1"
+```
 
 ## ¿Qué instala?
 
@@ -16,10 +25,13 @@ El script pide selección interactiva para navegadores y herramientas AI. El res
 
 | Componente | Origen | Selección |
 |---|---|---|
+| **PowerShell 7** | winget | siempre |
 | **Git** | winget | siempre |
 | **GitHub CLI** | winget | siempre |
 | **oh-my-posh** | winget | siempre |
 | **ImageMagick** | winget | siempre |
+| **fastfetch** | winget | siempre |
+| **FiraCode Nerd Font** | GitHub releases | siempre |
 | **VLC** | winget | siempre |
 | **Visual Studio Code** | winget | siempre |
 | **NanaZip** | winget | siempre |
@@ -34,6 +46,8 @@ El script pide selección interactiva para navegadores y herramientas AI. El res
 | **Temas OMP** | este repo | siempre |
 | **Perfil + Scripts** | este repo | siempre |
 
+También configura automáticamente **Windows Terminal**: FiraCode Nerd Font en todos los perfiles y PowerShell 7 como perfil por defecto.
+
 ## Estructura del repo y destinos de instalación
 
 ```
@@ -45,6 +59,8 @@ dotfiles/                                  destino en el equipo
 │       ├── night-owl.omp.json   →  ~\Documents\PowerShell\          ← tema activo
 │       ├── quick-term.omp.json  →  ~\Documents\PowerShell\
 │       └── mytheme.omp.json     →  ~\Documents\PowerShell\.mytheme.omp.json
+├── fastfetch/
+│   └── config.jsonc             →  %APPDATA%\fastfetch\config.jsonc
 ├── scripts/                     →  ~\Documents\PowerShell\CustomScripts\
 │   ├── MenuScripts.ps1                    (toolbox)
 │   ├── New-SSHKey.ps1
@@ -58,7 +74,7 @@ dotfiles/                                  destino en el equipo
 │   ├── BloquearAdobe.bat
 │   ├── calc_digito_de_verificacion.py
 │   └── procesar_notebook.py
-├── modules/
+├── Modules/
 │   └── ImgConv/                 →  ~\Documents\PowerShell\Modules\ImgConv\
 ├── setup.ps1
 └── README.md

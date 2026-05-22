@@ -10,7 +10,7 @@
       "keys":  "36",  // cyan
       "title": "96"   // bright cyan
     },
-    "moduleErrors": false
+    "showErrors": false
   },
   "modules": [
     "title",
