@@ -5,7 +5,9 @@
   // bateria el modulo se oculta automaticamente gracias a moduleErrors: false.
   "display": {
     "separator": "  ❯  ",
-    "keyWidth": 13,
+    "key": {
+      "width": 13
+    },
     "color": {
       "keys":  "36",  // cyan
       "title": "96"   // bright cyan

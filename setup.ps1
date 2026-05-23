@@ -397,7 +397,7 @@ foreach ($mod in $deployModules) {
     $dest = "$modDir\$($mod.name)"
     New-Item -ItemType Directory -Path $dest -Force | Out-Null
     foreach ($file in $mod.files) {
-        Deploy-File "Modules/$($mod.name)/$file" "$dest\$file"
+        Deploy-File "modules/$($mod.name)/$file" "$dest\$file"
     }
 }
 
