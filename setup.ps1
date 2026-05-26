@@ -227,10 +227,12 @@ function Set-WindowsTerminalConfig {
 # ─── Multi-select interactivo ─────────────────────────────────────────────────
 
 function Show-MultiSelect {
-    param([string]$Title, [array]$Items)
+    param([string]$Title, [array]$Items, [array]$PreSelected = @())
 
     $selected = @{}
-    for ($i = 0; $i -lt $Items.Count; $i++) { $selected[$i] = $false }
+    for ($i = 0; $i -lt $Items.Count; $i++) {
+        $selected[$i] = if ($i -lt $PreSelected.Count) { [bool]$PreSelected[$i] } else { $false }
+    }
 
     while ($true) {
         Clear-Host
@@ -312,7 +314,8 @@ if ($aiToShow.Count -gt 0) {
 }
 
 # ── Selección de scripts personales ──────────────────────────────────────────
-$selectedScripts = Show-MultiSelect -Title 'Scripts personales — ¿Cuáles instalar en CustomScripts?' -Items $scriptItems
+$scriptPreSel = @($scriptItems | ForEach-Object { [bool](Test-Path "$csDir\$($_.name)") })
+$selectedScripts = Show-MultiSelect -Title 'Scripts personales — ¿Cuáles instalar en CustomScripts?' -Items $scriptItems -PreSelected $scriptPreSel
 
 # ── Win11Debloat ──────────────────────────────────────────────────────────────
 Clear-Host

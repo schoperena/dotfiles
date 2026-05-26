@@ -238,7 +238,11 @@ $colDesc = New-Object Windows.Forms.DataGridViewTextBoxColumn
 $colDesc.HeaderText='Descripción'; $colDesc.AutoSizeMode='Fill'; $colDesc.ReadOnly=$true
 [void]$dgv.Columns.Add($colDesc)
 
-foreach ($s in $scriptItems) { [void]$dgv.Rows.Add($false, $s.name, $s.desc) }
+$csDir_ = "$(Split-Path $PROFILE)\CustomScripts"
+foreach ($s in $scriptItems) {
+    $installed = Test-Path "$csDir_\$($s.name)"
+    [void]$dgv.Rows.Add($installed, $s.name, $s.desc)
+}
 $pScripts.Controls.Add($dgv)
 
 $btnAllScripts.Add_Click({
