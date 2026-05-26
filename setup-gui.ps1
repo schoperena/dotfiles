@@ -4,7 +4,7 @@ param([string]$RepoBase = $PSScriptRoot)
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [Windows.Forms.Application]::EnableVisualStyles()
-[Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
+try { [Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false) } catch {}
 
 $ErrorActionPreference = 'Stop'
 
@@ -165,11 +165,6 @@ $clbNav.BackColor=$cCard; $clbNav.ForeColor=$cTxt; $clbNav.Font=$fNorm
 $clbNav.BorderStyle='None'; $clbNav.CheckOnClick=$true; $clbNav.IntegralHeight=$false
 foreach ($b in $browserItems) { [void]$clbNav.Items.Add($b.label) }
 $secNav.Panel.Controls.Add($clbNav)
-$secNav.BtnAll.Add_Click({
-    $a = $clbNav.CheckedItems.Count -eq $clbNav.Items.Count
-    for ($i=0; $i -lt $clbNav.Items.Count; $i++) { $clbNav.SetItemChecked($i, -not $a) }
-})
-
 # Herramientas AI
 $secAI = New-Section $pLeft 'Herramientas AI' 162 118
 $clbAI = New-Object Windows.Forms.CheckedListBox
@@ -180,7 +175,51 @@ foreach ($a in $aiItems) { [void]$clbAI.Items.Add($a.label) }
 $secAI.Panel.Controls.Add($clbAI)
 $secAI.BtnAll.Add_Click({
     $a = $clbAI.CheckedItems.Count -eq $clbAI.Items.Count
-    for ($i=0; $i -lt $clbAI.Items.Count; $i++) { $clbAI.SetItemChecked($i, -not $a) }
+    for ($i=0; $i -lt $clbAI.Items.Count; $i++) { if (-not $aiInstalledIdx.Contains($i)) { $clbAI.SetItemChecked($i, -not $a) } }
+})
+
+# ── Detección de paquetes ya instalados ───────────────────────────────────────
+$navInstalledIdx = [System.Collections.Generic.HashSet[int]]::new()
+$aiInstalledIdx  = [System.Collections.Generic.HashSet[int]]::new()
+
+# OwnerDraw para CheckedListBox: grises y bloqueados si ya instalado
+function Register-CLBOwnerDraw {
+    param([Windows.Forms.CheckedListBox]$clb, [System.Collections.Generic.HashSet[int]]$instIdx)
+    $clb.DrawMode = [Windows.Forms.DrawMode]::OwnerDrawFixed
+    $clb.Add_DrawItem({
+        param($s, $e)
+        if ($e.Index -lt 0) { return }
+        $inst = $instIdx.Contains($e.Index)
+        $bg   = if ($inst) { [Drawing.Color]::FromArgb(22,30,22) } else { $cCard }
+        $fg   = if ($inst) { [Drawing.Color]::FromArgb(68,105,68) } else { $cTxt }
+        $e.Graphics.FillRectangle([Drawing.SolidBrush]::new($bg), $e.Bounds)
+        $chkSz = [Windows.Forms.CheckBoxRenderer]::GetGlyphSize($e.Graphics, [Windows.Forms.VisualStyles.CheckBoxState]::CheckedNormal)
+        $pt    = New-Object Drawing.Point(($e.Bounds.X+2), ($e.Bounds.Y+[int](($e.Bounds.Height-$chkSz.Height)/2)))
+        $st    = if ($s.GetItemChecked($e.Index)) { [Windows.Forms.VisualStyles.CheckBoxState]::CheckedNormal } else { [Windows.Forms.VisualStyles.CheckBoxState]::UncheckedNormal }
+        [Windows.Forms.CheckBoxRenderer]::DrawCheckBox($e.Graphics, $pt, $st)
+        $tx = [float]($pt.X + $chkSz.Width + 4)
+        $ty = [float]($e.Bounds.Y + 2)
+        $e.Graphics.DrawString($s.Items[$e.Index], $e.Font, [Drawing.SolidBrush]::new($fg), $tx, $ty)
+        if ($inst) {
+            $tw = $e.Graphics.MeasureString($s.Items[$e.Index], $e.Font).Width
+            $e.Graphics.DrawString('  ✓ ya instalado', $fSmall, [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(55,125,55)), $tx+$tw, $ty+2)
+        }
+    }.GetNewClosure())
+    $clb.Add_ItemCheck({
+        param($s, $e)
+        if ($e.NewValue -eq [Windows.Forms.CheckState]::Unchecked -and $instIdx.Contains($e.Index)) {
+            $e.NewValue = [Windows.Forms.CheckState]::Checked
+        }
+    }.GetNewClosure())
+}
+
+Register-CLBOwnerDraw $clbNav $navInstalledIdx
+Register-CLBOwnerDraw $clbAI  $aiInstalledIdx
+
+# Fix "Todos" para nav también (respetar instalados)
+$secNav.BtnAll.Add_Click({
+    $a = ($clbNav.CheckedItems.Count - $navInstalledIdx.Count) -eq ($clbNav.Items.Count - $navInstalledIdx.Count)
+    for ($i=0; $i -lt $clbNav.Items.Count; $i++) { if (-not $navInstalledIdx.Contains($i)) { $clbNav.SetItemChecked($i, -not $a) } }
 })
 
 # Win11Debloat
@@ -238,16 +277,42 @@ $colDesc = New-Object Windows.Forms.DataGridViewTextBoxColumn
 $colDesc.HeaderText='Descripción'; $colDesc.AutoSizeMode='Fill'; $colDesc.ReadOnly=$true
 [void]$dgv.Columns.Add($colDesc)
 
+$cInstBg = [Drawing.Color]::FromArgb(22, 38, 22)
+$cInstFg = [Drawing.Color]::FromArgb(72, 115, 72)
+
 $csDir_ = "$(Split-Path $PROFILE)\CustomScripts"
 foreach ($s in $scriptItems) {
     $installed = Test-Path "$csDir_\$($s.name)"
-    [void]$dgv.Rows.Add($installed, $s.name, $s.desc)
+    $desc = if ($installed) { "✓ ya instalado  —  $($s.desc)" } else { $s.desc }
+    $idx  = $dgv.Rows.Add($installed, $s.name, $desc)
+    if ($installed) {
+        $row = $dgv.Rows[$idx]
+        $row.Tag = 'installed'
+        $row.DefaultCellStyle.BackColor          = $cInstBg
+        $row.DefaultCellStyle.ForeColor          = $cInstFg
+        $row.DefaultCellStyle.SelectionBackColor = [Drawing.Color]::FromArgb(28,48,28)
+        $row.DefaultCellStyle.SelectionForeColor = $cInstFg
+    }
 }
+
+# Commit inmediato del checkbox + revertir si la fila es 'installed'
+$dgv.Add_CurrentCellDirtyStateChanged({
+    if ($dgv.IsCurrentCellDirty) {
+        $dgv.CommitEdit([Windows.Forms.DataGridViewDataErrorContexts]::Commit)
+    }
+})
+$dgv.Add_CellValueChanged({
+    param($sender, $e)
+    if ($e.ColumnIndex -eq 0 -and $e.RowIndex -ge 0 -and $dgv.Rows[$e.RowIndex].Tag -eq 'installed') {
+        $dgv.Rows[$e.RowIndex].Cells[0].Value = $true
+    }
+})
+
 $pScripts.Controls.Add($dgv)
 
 $btnAllScripts.Add_Click({
-    $any = ($dgv.Rows | Where-Object { -not [bool]$_.Cells[0].Value }).Count -gt 0
-    foreach ($row in $dgv.Rows) { $row.Cells[0].Value = $any }
+    $any = ($dgv.Rows | Where-Object { $_.Tag -ne 'installed' -and -not [bool]$_.Cells[0].Value }).Count -gt 0
+    foreach ($row in $dgv.Rows) { if ($row.Tag -ne 'installed') { $row.Cells[0].Value = $any } }
     $dgv.RefreshEdit()
 })
 
@@ -485,6 +550,44 @@ $btnStart.Add_Click({
     })
     $timer.Start()
 })
+
+# ── Check async de paquetes ya instalados ────────────────────────────────────
+$syncCheck = [hashtable]::Synchronized(@{ WingetOut=''; NpmOut=''; Done=$false })
+$checkBlock = {
+    param($s, $bItems, $aItems)
+    try { $s.WingetOut = (winget list --accept-source-agreements 2>&1) -join "`n" } catch {}
+    try {
+        if (Get-Command npm -ErrorAction SilentlyContinue) {
+            $s.NpmOut = (npm list -g --depth=0 2>$null) -join "`n"
+        }
+    } catch {}
+    $s.Done = $true
+}
+$rsCheck = [runspacefactory]::CreateRunspace(); $rsCheck.Open()
+$psCheck = [powershell]::Create(); $psCheck.Runspace = $rsCheck
+[void]$psCheck.AddScript($checkBlock).AddArgument($syncCheck).AddArgument($browserItems).AddArgument($aiItems)
+[void]$psCheck.BeginInvoke()
+
+$timerCheck = New-Object Windows.Forms.Timer; $timerCheck.Interval = 250
+$timerCheck.Add_Tick({
+    if (-not $syncCheck.Done) { return }
+    $timerCheck.Stop()
+    $wl = $syncCheck.WingetOut
+    $nl = $syncCheck.NpmOut
+    for ($i = 0; $i -lt $browserItems.Count; $i++) {
+        if ($wl -match [regex]::Escape($browserItems[$i].id)) {
+            [void]$navInstalledIdx.Add($i); $clbNav.SetItemChecked($i, $true)
+        }
+    }
+    for ($i = 0; $i -lt $aiItems.Count; $i++) {
+        $found = if ($aiItems[$i].type -eq 'winget') { $wl -match [regex]::Escape($aiItems[$i].id) }
+                 else { $nl -match [regex]::Escape($aiItems[$i].id) }
+        if ($found) { [void]$aiInstalledIdx.Add($i); $clbAI.SetItemChecked($i, $true) }
+    }
+    $clbNav.Refresh(); $clbAI.Refresh()
+    try { $rsCheck.Close() } catch {}
+})
+$timerCheck.Start()
 
 # ── Mostrar formulario ────────────────────────────────────────────────────────
 [void]$form.ShowDialog()
