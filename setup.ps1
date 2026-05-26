@@ -71,19 +71,19 @@ $deployFiles = @(
     @{ repo = 'fastfetch/config.jsonc';                machine = "$env:APPDATA\fastfetch\config.jsonc" }
 )
 
-$deployScripts = @(
-    'BloquearAdobe.ps1'
-    'calc_digito_de_verificacion.py'
-    'deblotear_TCL10L.ps1'
-    'FormatearDisco.ps1'
-    'MenuScripts.ps1'
-    'New-SSHKey.ps1'
-    'procesar_notebook.py'
-    'renombrar_timelapse.ps1'
-    'stirling-sch.ps1'
-    'tree.ps1'
-    'verify-checksum.ps1'
-    'win11_rpd_patch.ps1'
+$scriptItems = @(
+    @{ name = 'MenuScripts.ps1';                  label = 'MenuScripts.ps1';                  desc = 'HUB central para lanzar todos los scripts del toolbox (recomendado)' }
+    @{ name = 'RenombrarMasivo.ps1';              label = 'RenombrarMasivo.ps1';              desc = 'Renombrado masivo con prefijo/sufijo/fecha/numeración y opción de revertir' }
+    @{ name = 'BloquearAdobe.ps1';                label = 'BloquearAdobe.ps1';                desc = 'Bloquea Adobe via archivo hosts para evitar conexiones no deseadas' }
+    @{ name = 'FormatearDisco.ps1';               label = 'FormatearDisco.ps1';               desc = 'Formatea y particiona discos con menú interactivo' }
+    @{ name = 'New-SSHKey.ps1';                   label = 'New-SSHKey.ps1';                   desc = 'Genera un par de llaves SSH y las configura automáticamente' }
+    @{ name = 'verify-checksum.ps1';              label = 'verify-checksum.ps1';              desc = 'Verifica integridad de archivos via MD5/SHA256/SHA512' }
+    @{ name = 'tree.ps1';                         label = 'tree.ps1';                         desc = 'Muestra árbol de directorios en consola (alternativa a cmd tree)' }
+    @{ name = 'win11_rpd_patch.ps1';              label = 'win11_rpd_patch.ps1';              desc = 'Habilita Escritorio Remoto (RDP) en Windows 11 Home' }
+    @{ name = 'stirling-sch.ps1';                 label = 'stirling-sch.ps1';                 desc = 'Levanta Stirling PDF localmente via Docker' }
+    @{ name = 'deblotear_TCL10L.ps1';             label = 'deblotear_TCL10L.ps1';             desc = 'Elimina bloatware de celulares TCL via ADB' }
+    @{ name = 'calc_digito_de_verificacion.py';   label = 'calc_digito_de_verificacion.py';   desc = 'Calcula dígito de verificación para NIT (Colombia)' }
+    @{ name = 'procesar_notebook.py';             label = 'procesar_notebook.py';             desc = 'Convierte y procesa Jupyter Notebooks a distintos formatos' }
 )
 
 $deployModules = @(
@@ -239,10 +239,13 @@ function Show-MultiSelect {
         Write-Host "  [numero] seleccionar/deseleccionar  |  A = todos  |  Enter = confirmar  |  Q = ninguno" -ForegroundColor DarkGray
         Write-Host ""
 
+        $maxLbl = ($Items | ForEach-Object { $_.label.Length } | Measure-Object -Maximum).Maximum
         for ($i = 0; $i -lt $Items.Count; $i++) {
             $mark  = if ($selected[$i]) { '[x]' } else { '[ ]' }
             $color = if ($selected[$i]) { 'Green' } else { 'White' }
-            Write-Host "    [$($i + 1)] $mark  $($Items[$i].label)" -ForegroundColor $color
+            $lbl   = $Items[$i].label.PadRight($maxLbl)
+            $desc  = if ($Items[$i].desc) { "  — $($Items[$i].desc)" } else { '' }
+            Write-Host "    [$($i + 1)] $mark  $lbl$desc" -ForegroundColor $color
         }
         Write-Host ""
         $key = Read-Host "  Opcion"
@@ -307,6 +310,9 @@ if ($aiToShow.Count -gt 0) {
     Write-Host "  Herramientas AI: todas ya instaladas, se omite seleccion." -ForegroundColor DarkGray
     Start-Sleep -Milliseconds 800
 }
+
+# ── Selección de scripts personales ──────────────────────────────────────────
+$selectedScripts = Show-MultiSelect -Title 'Scripts personales — ¿Cuáles instalar en CustomScripts?' -Items $scriptItems
 
 # ── Win11Debloat ──────────────────────────────────────────────────────────────
 Clear-Host
@@ -399,8 +405,12 @@ foreach ($entry in $deployFiles) {
 
 # ── 3b. Scripts -> CustomScripts\ ────────────────────────────────────────────
 Write-Step "Scripts personales -> $csDir"
-foreach ($script in $deployScripts) {
-    Deploy-File "scripts/$script" "$csDir\$script"
+if ($selectedScripts.Count -gt 0) {
+    foreach ($s in $selectedScripts) {
+        Deploy-File "scripts/$($s.name)" "$csDir\$($s.name)"
+    }
+} else {
+    Write-Skip "Ningún script seleccionado, se omite."
 }
 
 # ── 3c. Modulos custom -> Modules\<nombre>\ ───────────────────────────────────

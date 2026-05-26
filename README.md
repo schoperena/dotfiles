@@ -21,7 +21,7 @@ git clone https://github.com/schoperena/schoperena-win-setup "$env:USERPROFILE\.
 
 ## ¿Qué instala?
 
-El script pide selección interactiva para navegadores y herramientas AI. El resto se instala siempre.
+El script pide selección interactiva para navegadores, herramientas AI y scripts personales. El resto se instala siempre.
 
 | Componente | Origen | Selección |
 |---|---|---|
@@ -44,9 +44,11 @@ El script pide selección interactiva para navegadores y herramientas AI. El res
 | **ps2exe** | PSGallery | siempre |
 | **ImgConv** | este repo | siempre |
 | **Temas OMP** | este repo | siempre |
-| **Perfil + Scripts** | este repo | siempre |
+| **Scripts personales** | este repo | multi-selección |
 
 También configura automáticamente **Windows Terminal**: FiraCode Nerd Font en todos los perfiles y PowerShell 7 como perfil por defecto.
+
+Al final del setup se ofrece ejecutar **[Win11Debloat](https://github.com/raphire/win11debloat)** de [Raphire](https://github.com/raphire) — una herramienta interactiva para eliminar bloatware de Windows 11. Créditos completos al autor original.
 
 ## Estructura del repo y destinos de instalación
 
@@ -61,17 +63,17 @@ schoperena-win-setup/                      destino en el equipo
 │       └── mytheme.omp.json     →  ~\Documents\PowerShell\.mytheme.omp.json
 ├── fastfetch/
 │   └── config.jsonc             →  %APPDATA%\fastfetch\config.jsonc
-├── scripts/                     →  ~\Documents\PowerShell\CustomScripts\
-│   ├── MenuScripts.ps1                    (toolbox)
+├── scripts/                     →  ~\Documents\PowerShell\CustomScripts\ (selección)
+│   ├── MenuScripts.ps1                    (toolbox — hub de scripts)
+│   ├── RenombrarMasivo.ps1
+│   ├── BloquearAdobe.ps1
 │   ├── New-SSHKey.ps1
 │   ├── FormatearDisco.ps1
 │   ├── deblotear_TCL10L.ps1
-│   ├── renombrar_timelapse.ps1
 │   ├── stirling-sch.ps1
 │   ├── tree.ps1
 │   ├── verify-checksum.ps1
 │   ├── win11_rpd_patch.ps1
-│   ├── BloquearAdobe.bat
 │   ├── calc_digito_de_verificacion.py
 │   └── procesar_notebook.py
 ├── Modules/
@@ -91,12 +93,15 @@ schoperena-win-setup/                      destino en el equipo
 
 | Script | Descripción |
 |---|---|
-| `MenuScripts.ps1` | Este mismo hub |
+| `MenuScripts.ps1` | HUB central para lanzar todos los scripts del toolbox |
+| `RenombrarMasivo.ps1` | Renombrado masivo con criterios múltiples (prefijo, sufijo, fecha, numeración) y opción de revertir |
+| `BloquearAdobe.ps1` | Bloquea Adobe vía archivo hosts para evitar conexiones no deseadas |
 | `New-SSHKey.ps1` | Genera clave SSH (Ed25519 o RSA 4096) para GitHub/GitLab |
 | `FormatearDisco.ps1` | Formatea discos externos (NTFS / exFAT / FAT32) — requiere Admin |
 | `deblotear_TCL10L.ps1` | Elimina bloatware del TCL 10L vía ADB |
-| `renombrar_timelapse.ps1` | Renombra imágenes de timelapse en secuencia numérica |
 | `stirling-sch.ps1` | Instala Stirling-PDF apuntando al servidor interno |
 | `tree.ps1` | Muestra árbol de directorios |
 | `verify-checksum.ps1` | Verifica checksum SHA256/SHA1/MD5 de un archivo |
 | `win11_rpd_patch.ps1` | Parche para habilitar RDP en Windows 11 Home |
+| `calc_digito_de_verificacion.py` | Calcula dígito de verificación para NIT (Colombia) |
+| `procesar_notebook.py` | Convierte y procesa Jupyter Notebooks a distintos formatos |
