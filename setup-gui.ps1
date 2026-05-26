@@ -325,7 +325,8 @@ $btnStart.Add_Click({
                     $already = winget list --id $Id --accept-source-agreements 2>&1 | Select-String $Id
                     if ($already) { Log "  --  $Name ya instalado" 'dim'; return }
                     Log "  >>  Instalando $Name..." 'cyan'
-                    winget install --id $Id -e --accept-package-agreements --accept-source-agreements --source $Src 2>&1 | Out-Null
+                    $out = winget install --id $Id -e --accept-package-agreements --accept-source-agreements --source $Src 2>&1
+                    foreach ($line in $out) { $s = "$line".Trim(); if ($s) { Log "      $s" 'dim' } }
                 } elseif ($Type -eq 'npm') {
                     if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
                         Log "  !!  npm no disponible — instala Node.js primero" 'yellow'; return
@@ -333,7 +334,8 @@ $btnStart.Add_Click({
                     $already = npm list -g --depth=0 2>$null | Select-String ([regex]::Escape($Id))
                     if ($already) { Log "  --  $Name ya instalado" 'dim'; return }
                     Log "  >>  Instalando $Name (npm)..." 'cyan'
-                    npm install -g $Id 2>&1 | Out-Null
+                    $out = npm install -g $Id 2>&1
+                    foreach ($line in $out) { $s = "$line".Trim(); if ($s) { Log "      $s" 'dim' } }
                 }
                 Log "  OK  $Name" 'green'
             } catch { Log "  !!  $Name : $($_.Exception.Message)" 'yellow' }
@@ -349,23 +351,55 @@ $btnStart.Add_Click({
         }
 
         try {
+            # ── 1. Perfil y archivos de configuración PRIMERO ─────────────────
+            # Esto evita que procesos hijo (npm post-install, winget scripts)
+            # carguen un perfil antiguo con llamadas a apps no instaladas aún.
+            Log '══ Perfil y configuración' 'cyan'
+            New-Item -ItemType Directory $psDir,$modDir,$csDir,"$env:APPDATA\fastfetch" -Force | Out-Null
+            if (Test-Path $profilePath) {
+                Copy-Item $profilePath "$profilePath.bak_$(Get-Date -Format 'yyyyMMdd_HHmmss')" -Force
+                Log "  --  Backup del perfil anterior creado" 'dim'
+            }
+            @(
+                @("$repoBase\powershell\profile.ps1",                $profilePath)
+                @("$repoBase\powershell\powershell.config.json",     "$psDir\powershell.config.json")
+                @("$repoBase\powershell\themes\night-owl.omp.json",  "$psDir\night-owl.omp.json")
+                @("$repoBase\powershell\themes\quick-term.omp.json", "$psDir\quick-term.omp.json")
+                @("$repoBase\powershell\themes\mytheme.omp.json",    "$psDir\.mytheme.omp.json")
+                @("$repoBase\fastfetch\config.jsonc",                "$env:APPDATA\fastfetch\config.jsonc")
+            ) | ForEach-Object { Deploy $_[0] $_[1] }
+
+            if ($selScripts.Count -gt 0) {
+                Log '══ Scripts personales' 'cyan'
+                foreach ($s in $selScripts) { Deploy "$repoBase\scripts\$($s.name)" "$csDir\$($s.name)" }
+            }
+
+            $imgConvSrc = "$repoBase\modules\ImgConv"
+            if (Test-Path $imgConvSrc) {
+                Log '══ Módulo ImgConv' 'cyan'
+                $dst = "$modDir\ImgConv"
+                New-Item -ItemType Directory $dst -Force | Out-Null
+                Get-ChildItem $imgConvSrc | ForEach-Object { Deploy $_.FullName "$dst\$($_.Name)" }
+            }
+
+            # ── 2. Paquetes ───────────────────────────────────────────────────
             Log '══ PowerShell 7' 'cyan'
             Install-Pkg 'Microsoft.PowerShell' 'PowerShell 7' 'winget'
 
             Log '══ Dependencias' 'cyan'
-            Install-Pkg 'Git.Git'                  'Git'            'winget'
-            Install-Pkg 'GitHub.cli'               'GitHub CLI'     'winget'
-            Install-Pkg 'JanDeDobbeleer.OhMyPosh' 'oh-my-posh'    'winget'
-            Install-Pkg 'ImageMagick.Q16-HDRI'    'ImageMagick'   'winget'
-            Install-Pkg 'Fastfetch-cli.Fastfetch' 'fastfetch'     'winget'
+            Install-Pkg 'Git.Git'                  'Git'         'winget'
+            Install-Pkg 'GitHub.cli'               'GitHub CLI'  'winget'
+            Install-Pkg 'JanDeDobbeleer.OhMyPosh' 'oh-my-posh' 'winget'
+            Install-Pkg 'ImageMagick.Q16-HDRI'    'ImageMagick' 'winget'
+            Install-Pkg 'Fastfetch-cli.Fastfetch' 'fastfetch'   'winget'
             if ($selAI | Where-Object { $_.type -eq 'npm' }) {
                 Install-Pkg 'OpenJS.NodeJS.LTS' 'Node.js LTS' 'winget'
             }
 
             Log '══ Apps esenciales' 'cyan'
-            Install-Pkg 'VideoLAN.VLC'               'VLC'      'winget'
-            Install-Pkg 'Microsoft.VisualStudioCode' 'VS Code'  'winget'
-            Install-Pkg 'M2Team.NanaZip'             'NanaZip'  'winget'
+            Install-Pkg 'VideoLAN.VLC'               'VLC'     'winget'
+            Install-Pkg 'Microsoft.VisualStudioCode' 'VS Code' 'winget'
+            Install-Pkg 'M2Team.NanaZip'             'NanaZip' 'winget'
 
             if ($selBrowsers.Count -gt 0) {
                 Log '══ Navegadores' 'cyan'
@@ -401,34 +435,6 @@ $btnStart.Add_Click({
                     Log "  OK  FiraCode Nerd Font Regular" 'green'
                 }
                 Remove-Item $zip,$dir -Recurse -Force -ErrorAction SilentlyContinue
-            }
-
-            Log '══ Configuración' 'cyan'
-            New-Item -ItemType Directory $psDir,$modDir,$csDir,"$env:APPDATA\fastfetch" -Force | Out-Null
-            if (Test-Path $profilePath) {
-                Copy-Item $profilePath "$profilePath.bak_$(Get-Date -Format 'yyyyMMdd_HHmmss')" -Force
-                Log "  --  Backup de perfil anterior creado" 'dim'
-            }
-            @(
-                @("$repoBase\powershell\profile.ps1",                $profilePath)
-                @("$repoBase\powershell\powershell.config.json",     "$psDir\powershell.config.json")
-                @("$repoBase\powershell\themes\night-owl.omp.json",  "$psDir\night-owl.omp.json")
-                @("$repoBase\powershell\themes\quick-term.omp.json", "$psDir\quick-term.omp.json")
-                @("$repoBase\powershell\themes\mytheme.omp.json",    "$psDir\.mytheme.omp.json")
-                @("$repoBase\fastfetch\config.jsonc",                "$env:APPDATA\fastfetch\config.jsonc")
-            ) | ForEach-Object { Deploy $_[0] $_[1] }
-
-            if ($selScripts.Count -gt 0) {
-                Log '══ Scripts personales' 'cyan'
-                foreach ($s in $selScripts) { Deploy "$repoBase\scripts\$($s.name)" "$csDir\$($s.name)" }
-            }
-
-            $imgConvSrc = "$repoBase\modules\ImgConv"
-            if (Test-Path $imgConvSrc) {
-                Log '══ Módulo ImgConv' 'cyan'
-                $dst = "$modDir\ImgConv"
-                New-Item -ItemType Directory $dst -Force | Out-Null
-                Get-ChildItem $imgConvSrc | ForEach-Object { Deploy $_.FullName "$dst\$($_.Name)" }
             }
 
             if ($runDebloat) {
