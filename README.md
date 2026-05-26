@@ -1,4 +1,4 @@
-# dotfiles — schoperena
+# schoperena-win-setup
 
 Configuración personal de PowerShell: prompt, módulos, temas y scripts.
 
@@ -7,7 +7,7 @@ Configuración personal de PowerShell: prompt, módulos, temas y scripts.
 No necesitas `git`. Abre **Windows PowerShell** (el que viene con Windows 11) y ejecuta:
 
 ```powershell
-& ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/schoperena/dotfiles/main/setup.ps1')))
+& ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/schoperena/schoperena-win-setup/main/setup.ps1')))
 ```
 
 El script detecta automáticamente si estás en PowerShell 5.1, instala PowerShell 7 con `winget` y se relanza en él.
@@ -15,8 +15,8 @@ El script detecta automáticamente si estás en PowerShell 5.1, instala PowerShe
 Si prefieres clonar el repo primero:
 
 ```powershell
-git clone https://github.com/schoperena/dotfiles "$env:USERPROFILE\.dotfiles"
-& "$env:USERPROFILE\.dotfiles\setup.ps1"
+git clone https://github.com/schoperena/schoperena-win-setup "$env:USERPROFILE\.win-setup"
+& "$env:USERPROFILE\.win-setup\setup.ps1"
 ```
 
 ## ¿Qué instala?
@@ -51,7 +51,7 @@ También configura automáticamente **Windows Terminal**: FiraCode Nerd Font en 
 ## Estructura del repo y destinos de instalación
 
 ```
-dotfiles/                                  destino en el equipo
+schoperena-win-setup/                      destino en el equipo
 ├── powershell/
 │   ├── profile.ps1              →  $PROFILE
 │   ├── powershell.config.json   →  ~\Documents\PowerShell\

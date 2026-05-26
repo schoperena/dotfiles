@@ -1,16 +1,16 @@
 <#
 .SYNOPSIS
-    Setup script for schoperena dotfiles.
+    Setup script for schoperena-win-setup.
     Compatible con Windows PowerShell 5.1 y PowerShell 7+.
 
     Desde el repo clonado:
         .\setup.ps1
     One-liner (sin necesidad de git):
-        & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/schoperena/dotfiles/main/setup.ps1')))
+        & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/schoperena/schoperena-win-setup/main/setup.ps1')))
 #>
 
 $ErrorActionPreference = 'Stop'
-$RepoUrl = 'https://raw.githubusercontent.com/schoperena/dotfiles/main'
+$RepoUrl = 'https://raw.githubusercontent.com/schoperena/schoperena-win-setup/main'
 
 # ─── Bootstrap: si corre en PS < 7, instalar PS7 y relanzar ─────────────────
 if ($PSVersionTable.PSVersion.Major -lt 7) {
@@ -72,7 +72,7 @@ $deployFiles = @(
 )
 
 $deployScripts = @(
-    'BloquearAdobe.bat'
+    'BloquearAdobe.ps1'
     'calc_digito_de_verificacion.py'
     'deblotear_TCL10L.ps1'
     'FormatearDisco.ps1'
@@ -102,7 +102,7 @@ function Get-RepoFile {
     if ($isLocal) {
         return Join-Path $repoBase $relPath.Replace('/', '\')
     } else {
-        $tmp = Join-Path $env:TEMP ("dotfiles_" + ($relPath -replace '[/\\]', '_'))
+        $tmp = Join-Path $env:TEMP ("winsetup_" + ($relPath -replace '[/\\]', '_'))
         Invoke-WebRequest "$repoBase/$relPath" -OutFile $tmp -UseBasicParsing
         return $tmp
     }
@@ -268,7 +268,7 @@ function Show-MultiSelect {
 Clear-Host
 Write-Host ""
 Write-Host "  ╔══════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "  ║   schoperena dotfiles — Setup            ║" -ForegroundColor Cyan
+Write-Host "  ║   schoperena-win-setup — Setup           ║" -ForegroundColor Cyan
 Write-Host "  ╚══════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  Verificando paquetes ya instalados..." -ForegroundColor DarkGray
@@ -307,6 +307,18 @@ if ($aiToShow.Count -gt 0) {
     Write-Host "  Herramientas AI: todas ya instaladas, se omite seleccion." -ForegroundColor DarkGray
     Start-Sleep -Milliseconds 800
 }
+
+# ── Win11Debloat ──────────────────────────────────────────────────────────────
+Clear-Host
+Write-Host ""
+Write-Host "  Win11Debloat — por Raphire" -ForegroundColor Cyan
+Write-Host "  https://github.com/raphire/win11debloat" -ForegroundColor DarkGray
+Write-Host ""
+Write-Host "  Herramienta interactiva para eliminar bloatware de Windows 11." -ForegroundColor White
+Write-Host "  Se ejecutara al final del setup si aceptas." -ForegroundColor DarkGray
+Write-Host ""
+$debloatInput = Read-Host "  ¿Ejecutar Win11Debloat al final? [S/n]"
+$runDebloat = $debloatInput -match '^[sS]?$'
 
 Clear-Host
 
@@ -407,6 +419,19 @@ foreach ($mod in $deployModules) {
 
 Write-Step "Windows Terminal"
 Set-WindowsTerminalConfig
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  PASO 5 — Win11Debloat (opcional)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+if ($runDebloat) {
+    Write-Step "Win11Debloat"
+    Write-Host ""
+    Write-Host "  Creditos: Raphire" -ForegroundColor DarkGray
+    Write-Host "  Repo   : https://github.com/raphire/win11debloat" -ForegroundColor DarkGray
+    Write-Host ""
+    & ([scriptblock]::Create((irm "https://debloat.raphi.re/")))
+}
 
 # ── Fin ───────────────────────────────────────────────────────────────────────
 Write-Host ""
