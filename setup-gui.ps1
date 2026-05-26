@@ -1,0 +1,466 @@
+#Requires -Version 7
+param([string]$RepoBase = $PSScriptRoot)
+
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+[Windows.Forms.Application]::EnableVisualStyles()
+[Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
+
+$ErrorActionPreference = 'Stop'
+
+# ── Paleta dark ───────────────────────────────────────────────────────────────
+$cBg      = [Drawing.Color]::FromArgb(18,  18,  30)
+$cPanel   = [Drawing.Color]::FromArgb(26,  26,  42)
+$cCard    = [Drawing.Color]::FromArgb(34,  34,  54)
+$cBorder  = [Drawing.Color]::FromArgb(55,  55,  88)
+$cAccent  = [Drawing.Color]::FromArgb(0,  180, 216)
+$cTxt     = [Drawing.Color]::FromArgb(218, 218, 232)
+$cTxtDim  = [Drawing.Color]::FromArgb(130, 130, 155)
+$cGreen   = [Drawing.Color]::FromArgb(72,  199, 116)
+$cYellow  = [Drawing.Color]::FromArgb(255, 200,  70)
+$cRed     = [Drawing.Color]::FromArgb(255,  88,  88)
+$cRowAlt  = [Drawing.Color]::FromArgb(40,  40,  62)
+$cSelBg   = [Drawing.Color]::FromArgb(0,  100, 160)
+$cBtnAll  = [Drawing.Color]::FromArgb(50,  50,  78)
+$cBtnRun  = [Drawing.Color]::FromArgb(0,  148,  80)
+$cBtnCan  = [Drawing.Color]::FromArgb(120,  30,  30)
+
+# ── Fuentes ───────────────────────────────────────────────────────────────────
+$fTitle  = New-Object Drawing.Font('Segoe UI', 16, [Drawing.FontStyle]::Bold)
+$fHead   = New-Object Drawing.Font('Segoe UI', 10, [Drawing.FontStyle]::Bold)
+$fNorm   = New-Object Drawing.Font('Segoe UI',  9)
+$fSmall  = New-Object Drawing.Font('Segoe UI',  8)
+$fMono   = New-Object Drawing.Font('Consolas',  9)
+
+# ── Datos ─────────────────────────────────────────────────────────────────────
+$browserItems = @(
+    @{ label='Google Chrome';   id='Google.Chrome';               type='winget' }
+    @{ label='Brave';           id='Brave.Brave';                  type='winget' }
+    @{ label='Mozilla Firefox'; id='Mozilla.Firefox';              type='winget' }
+    @{ label='LibreWolf';       id='LibreWolf.LibreWolf';          type='winget' }
+)
+$aiItems = @(
+    @{ label='Claude Desktop';  id='Anthropic.Claude';            type='winget' }
+    @{ label='Claude Code CLI'; id='@anthropic-ai/claude-code';   type='npm'    }
+    @{ label='Codex CLI';       id='@openai/codex';               type='npm'    }
+)
+$scriptItems = @(
+    @{ name='MenuScripts.ps1';                desc='HUB central del toolbox (recomendado)' }
+    @{ name='RenombrarMasivo.ps1';            desc='Renombrado masivo con criterios múltiples y opción de revertir' }
+    @{ name='BloquearAdobe.ps1';              desc='Bloquea Adobe vía archivo hosts' }
+    @{ name='FormatearDisco.ps1';             desc='Formatea discos interactivamente — requiere Admin' }
+    @{ name='New-SSHKey.ps1';                 desc='Genera llaves SSH Ed25519 / RSA 4096' }
+    @{ name='verify-checksum.ps1';            desc='Verifica integridad via MD5 / SHA256 / SHA512' }
+    @{ name='tree.ps1';                       desc='Árbol de directorios en consola' }
+    @{ name='win11_rpd_patch.ps1';            desc='Habilita Escritorio Remoto (RDP) en Windows 11 Home' }
+    @{ name='stirling-sch.ps1';               desc='Levanta Stirling PDF localmente vía Docker' }
+    @{ name='deblotear_TCL10L.ps1';           desc='Elimina bloatware del TCL 10L vía ADB' }
+    @{ name='calc_digito_de_verificacion.py'; desc='Calcula dígito de verificación NIT (Colombia)' }
+    @{ name='procesar_notebook.py';           desc='Convierte y procesa Jupyter Notebooks' }
+)
+
+# ── Layout ────────────────────────────────────────────────────────────────────
+$M       = 20       # margen lateral
+$TOP     = 75       # y inicio contenido
+$LWIDTH  = 340      # ancho panel izquierdo
+$GAP     = 14       # separación entre paneles
+$RBASE   = $M + $LWIDTH + $GAP                  # x panel scripts = 374
+$RWIDTH  = 1280 - $RBASE - $M                   # ancho panel scripts = 886
+$CH      = 455      # altura zona contenido
+$LOG_Y   = $TOP + $CH + 8                        # = 538
+$LOG_H   = 108
+$BTN_Y   = $LOG_Y + $LOG_H + 8                  # = 654
+
+# ── Helpers de control ────────────────────────────────────────────────────────
+function New-Lbl {
+    param([string]$t, [int]$x, [int]$y, [int]$w, [int]$h,
+          $font=$fNorm, $fg=$cTxt, $parent=$null)
+    $l = New-Object Windows.Forms.Label
+    $l.Text=$t; $l.Location="$x,$y"; $l.Size="$w,$h"
+    $l.Font=$font; $l.ForeColor=$fg; $l.BackColor=[Drawing.Color]::Transparent
+    if ($parent) { $parent.Controls.Add($l) }
+    return $l
+}
+
+function New-FlatBtn {
+    param([string]$t, [int]$x, [int]$y, [int]$w, [int]$h,
+          $bg=$cBtnAll, $fg=$cTxt, $font=$fNorm, $parent=$null)
+    $b = New-Object Windows.Forms.Button
+    $b.Text=$t; $b.Location="$x,$y"; $b.Size="$w,$h"
+    $b.BackColor=$bg; $b.ForeColor=$fg; $b.Font=$font
+    $b.FlatStyle='Flat'; $b.FlatAppearance.BorderSize=0
+    $b.Cursor=[Windows.Forms.Cursors]::Hand
+    if ($parent) { $parent.Controls.Add($b) }
+    return $b
+}
+
+function New-HLine {
+    param([int]$y, [int]$w, $parent=$null)
+    $p = New-Object Windows.Forms.Panel
+    $p.Location="0,$y"; $p.Size="$w,1"; $p.BackColor=$cBorder
+    if ($parent) { $parent.Controls.Add($p) }
+    return $p
+}
+
+# Sección coloreada con cabecera y botón "Todos"
+function New-Section {
+    param([Windows.Forms.Control]$parent,
+          [string]$title, [int]$y, [int]$h, [bool]$showBtn=$true)
+    $p = New-Object Windows.Forms.Panel
+    $p.Location="0,$y"; $p.Size="$LWIDTH,$h"
+    $p.BackColor=$cCard; $p.BorderStyle='FixedSingle'
+    $parent.Controls.Add($p)
+    New-Lbl $title 10 8 200 20 $fHead $cAccent $p | Out-Null
+    New-HLine 30 $LWIDTH $p | Out-Null
+    $btn = $null
+    if ($showBtn) {
+        $btn = New-FlatBtn 'Todos' ($LWIDTH-100) 5 90 20 $cBtnAll $cTxtDim $fSmall $p
+    }
+    return @{ Panel=$p; BtnAll=$btn }
+}
+
+# ── Formulario ────────────────────────────────────────────────────────────────
+$form = New-Object Windows.Forms.Form
+$form.Text            = 'schoperena-win-setup'
+$form.ClientSize      = '1280,720'
+$form.StartPosition   = 'CenterScreen'
+$form.BackColor       = $cBg
+$form.ForeColor       = $cTxt
+$form.Font            = $fNorm
+$form.FormBorderStyle = 'FixedSingle'
+$form.MaximizeBox     = $false
+
+# ── Header ────────────────────────────────────────────────────────────────────
+$pHeader = New-Object Windows.Forms.Panel
+$pHeader.Location='0,0'; $pHeader.Size='1280,65'; $pHeader.BackColor=$cPanel
+$form.Controls.Add($pHeader)
+New-Lbl 'schoperena-win-setup' 20 9 600 34 $fTitle $cAccent $pHeader | Out-Null
+New-Lbl 'Setup interactivo de entorno personal Windows' 23 43 700 18 $fNorm $cTxtDim $pHeader | Out-Null
+New-HLine 65 1280 $form | Out-Null
+
+# ── Panel izquierdo ───────────────────────────────────────────────────────────
+$pLeft = New-Object Windows.Forms.Panel
+$pLeft.Location="$M,$TOP"; $pLeft.Size="$LWIDTH,$CH"; $pLeft.BackColor=$cBg
+$form.Controls.Add($pLeft)
+
+# Navegadores
+$secNav = New-Section $pLeft 'Navegadores' 0 152
+$clbNav = New-Object Windows.Forms.CheckedListBox
+$clbNav.Location='8,34'; $clbNav.Size='324,110'
+$clbNav.BackColor=$cCard; $clbNav.ForeColor=$cTxt; $clbNav.Font=$fNorm
+$clbNav.BorderStyle='None'; $clbNav.CheckOnClick=$true; $clbNav.IntegralHeight=$false
+foreach ($b in $browserItems) { [void]$clbNav.Items.Add($b.label) }
+$secNav.Panel.Controls.Add($clbNav)
+$secNav.BtnAll.Add_Click({
+    $a = $clbNav.CheckedItems.Count -eq $clbNav.Items.Count
+    for ($i=0; $i -lt $clbNav.Items.Count; $i++) { $clbNav.SetItemChecked($i, -not $a) }
+})
+
+# Herramientas AI
+$secAI = New-Section $pLeft 'Herramientas AI' 162 118
+$clbAI = New-Object Windows.Forms.CheckedListBox
+$clbAI.Location='8,34'; $clbAI.Size='324,78'
+$clbAI.BackColor=$cCard; $clbAI.ForeColor=$cTxt; $clbAI.Font=$fNorm
+$clbAI.BorderStyle='None'; $clbAI.CheckOnClick=$true; $clbAI.IntegralHeight=$false
+foreach ($a in $aiItems) { [void]$clbAI.Items.Add($a.label) }
+$secAI.Panel.Controls.Add($clbAI)
+$secAI.BtnAll.Add_Click({
+    $a = $clbAI.CheckedItems.Count -eq $clbAI.Items.Count
+    for ($i=0; $i -lt $clbAI.Items.Count; $i++) { $clbAI.SetItemChecked($i, -not $a) }
+})
+
+# Win11Debloat
+$secDeb = New-Section $pLeft 'Extras' 290 82 $false
+$chkDeb = New-Object Windows.Forms.CheckBox
+$chkDeb.Location='10,36'; $chkDeb.Size='316,20'
+$chkDeb.Text='Win11Debloat  (by Raphire)'
+$chkDeb.BackColor=$cCard; $chkDeb.ForeColor=$cTxt; $chkDeb.Font=$fNorm; $chkDeb.FlatStyle='Flat'
+$secDeb.Panel.Controls.Add($chkDeb)
+New-Lbl 'Elimina bloatware de Windows 11 — se ejecuta al finalizar el resto' `
+    10 58 320 16 $fSmall $cTxtDim $secDeb.Panel | Out-Null
+
+# ── Panel derecho: Scripts ────────────────────────────────────────────────────
+$pScripts = New-Object Windows.Forms.Panel
+$pScripts.Location="$RBASE,$TOP"; $pScripts.Size="$RWIDTH,$CH"
+$pScripts.BackColor=$cCard; $pScripts.BorderStyle='FixedSingle'
+$form.Controls.Add($pScripts)
+
+New-Lbl 'Scripts personales' 10 8 300 20 $fHead $cAccent $pScripts | Out-Null
+New-HLine 30 $RWIDTH $pScripts | Out-Null
+
+$btnAllScripts = New-FlatBtn 'Todos' ($RWIDTH-100) 5 90 20 $cBtnAll $cTxtDim $fSmall $pScripts
+
+# DataGridView
+$dgv = New-Object Windows.Forms.DataGridView
+$dgv.Location='5,34'
+$dgv.Size=New-Object Drawing.Size(($RWIDTH-10), ($CH-39))
+$dgv.BackgroundColor=$cCard; $dgv.GridColor=$cBorder; $dgv.BorderStyle='None'
+$dgv.RowHeadersVisible=$false; $dgv.AllowUserToAddRows=$false
+$dgv.AllowUserToDeleteRows=$false; $dgv.AllowUserToResizeRows=$false
+$dgv.MultiSelect=$false; $dgv.SelectionMode='FullRowSelect'
+$dgv.RowTemplate.Height=30; $dgv.ScrollBars='Vertical'
+$dgv.EnableHeadersVisualStyles=$false; $dgv.Font=$fNorm
+
+$dgv.DefaultCellStyle.BackColor=$cCard; $dgv.DefaultCellStyle.ForeColor=$cTxt
+$dgv.DefaultCellStyle.SelectionBackColor=$cSelBg; $dgv.DefaultCellStyle.SelectionForeColor=$cTxt
+$dgv.AlternatingRowsDefaultCellStyle.BackColor=$cRowAlt
+$dgv.AlternatingRowsDefaultCellStyle.ForeColor=$cTxt
+$dgv.ColumnHeadersDefaultCellStyle.BackColor=$cPanel
+$dgv.ColumnHeadersDefaultCellStyle.ForeColor=$cAccent
+$dgv.ColumnHeadersDefaultCellStyle.Font=$fHead
+$dgv.ColumnHeadersHeight=30; $dgv.ColumnHeadersBorderStyle='Single'
+
+$colChk  = New-Object Windows.Forms.DataGridViewCheckBoxColumn
+$colChk.HeaderText=''; $colChk.Width=44; $colChk.Resizable='False'
+$colChk.DefaultCellStyle.Alignment='MiddleCenter'
+[void]$dgv.Columns.Add($colChk)
+
+$colName = New-Object Windows.Forms.DataGridViewTextBoxColumn
+$colName.HeaderText='Script'; $colName.Width=230; $colName.ReadOnly=$true; $colName.Resizable='False'
+
+[void]$dgv.Columns.Add($colName)
+
+$colDesc = New-Object Windows.Forms.DataGridViewTextBoxColumn
+$colDesc.HeaderText='Descripción'; $colDesc.AutoSizeMode='Fill'; $colDesc.ReadOnly=$true
+[void]$dgv.Columns.Add($colDesc)
+
+foreach ($s in $scriptItems) { [void]$dgv.Rows.Add($false, $s.name, $s.desc) }
+$pScripts.Controls.Add($dgv)
+
+$btnAllScripts.Add_Click({
+    $any = ($dgv.Rows | Where-Object { -not [bool]$_.Cells[0].Value }).Count -gt 0
+    foreach ($row in $dgv.Rows) { $row.Cells[0].Value = $any }
+    $dgv.RefreshEdit()
+})
+
+# ── Log area ──────────────────────────────────────────────────────────────────
+$rtbLog = New-Object Windows.Forms.RichTextBox
+$rtbLog.Location="$M,$LOG_Y"
+$rtbLog.Size=New-Object Drawing.Size((1280-$M*2), $LOG_H)
+$rtbLog.BackColor=$cPanel; $rtbLog.ForeColor=$cTxtDim; $rtbLog.Font=$fMono
+$rtbLog.ReadOnly=$true; $rtbLog.BorderStyle='None'; $rtbLog.ScrollBars='Vertical'
+$rtbLog.Text="  Configura tu selección y presiona  ▶ Iniciar Setup  para comenzar.`n"
+$form.Controls.Add($rtbLog)
+
+# ── Footer ────────────────────────────────────────────────────────────────────
+$btnCancel = New-FlatBtn 'Cancelar' (1280-$M-220) $BTN_Y 100 34 $cBtnCan ([Drawing.Color]::FromArgb(255,120,120)) $fNorm $form
+$btnStart  = New-FlatBtn '▶  Iniciar Setup' (1280-$M-110) $BTN_Y 110 34 $cBtnRun $cTxt $fHead $form
+$btnCancel.Add_Click({ $form.Close() })
+
+# ── Colormap para el log ──────────────────────────────────────────────────────
+$logColors = @{
+    green  = $cGreen; cyan   = $cAccent; yellow = $cYellow
+    red    = $cRed;   dim    = $cTxtDim; default = $cTxt
+}
+
+function Append-Log {
+    param([string]$raw)
+    if ($raw -match '^\[(\w+)\](.*)') {
+        $col  = if ($logColors.ContainsKey($matches[1])) { $logColors[$matches[1]] } else { $cTxt }
+        $text = $matches[2]
+    } else { $col = $cTxt; $text = $raw }
+    $rtbLog.SelectionStart  = $rtbLog.TextLength
+    $rtbLog.SelectionLength = 0
+    $rtbLog.SelectionColor  = $col
+    $rtbLog.AppendText("$text`n")
+    $rtbLog.ScrollToCaret()
+}
+
+# ── Lógica de inicio ──────────────────────────────────────────────────────────
+$btnStart.Add_Click({
+    # Recopilar selecciones desde la UI
+    $selBrowsers = @(); for ($i=0; $i -lt $clbNav.Items.Count; $i++) { if ($clbNav.GetItemChecked($i)) { $selBrowsers += $browserItems[$i] } }
+    $selAI       = @(); for ($i=0; $i -lt $clbAI.Items.Count;  $i++) { if ($clbAI.GetItemChecked($i))  { $selAI       += $aiItems[$i]      } }
+    $selScripts  = @()
+    foreach ($row in $dgv.Rows) {
+        if ([bool]$row.Cells[0].Value) {
+            $n = $row.Cells[1].Value
+            $selScripts += ($scriptItems | Where-Object { $_.name -eq $n })
+        }
+    }
+    $runDebloat = $chkDeb.Checked
+
+    $btnStart.Enabled = $false; $btnCancel.Enabled = $false
+    $rtbLog.Clear()
+
+    # Hashtable sincronizado para comunicación inter-runspace
+    $sync = [hashtable]::Synchronized(@{
+        Log  = [System.Collections.Concurrent.ConcurrentQueue[string]]::new()
+        Done = $false
+    })
+
+    $psDir   = Split-Path $PROFILE
+    $csDir   = "$psDir\CustomScripts"
+    $modDir  = "$psDir\Modules"
+    $profile_ = $PROFILE
+
+    # Script de instalación (corre en runspace separado)
+    $installBlock = {
+        param($sync, $repoBase, $selBrowsers, $selAI, $selScripts,
+              $runDebloat, $psDir, $csDir, $modDir, $profilePath)
+
+        function Log {
+            param([string]$msg, [string]$c='default')
+            $sync.Log.Enqueue("[$c]$msg")
+        }
+
+        function Install-Pkg {
+            param([string]$Id, [string]$Name, [string]$Type, [string]$Src='winget')
+            try {
+                if ($Type -eq 'winget') {
+                    $already = winget list --id $Id --accept-source-agreements 2>&1 | Select-String $Id
+                    if ($already) { Log "  --  $Name ya instalado" 'dim'; return }
+                    Log "  >>  Instalando $Name..." 'cyan'
+                    winget install --id $Id -e --accept-package-agreements --accept-source-agreements --source $Src 2>&1 | Out-Null
+                } elseif ($Type -eq 'npm') {
+                    if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+                        Log "  !!  npm no disponible — instala Node.js primero" 'yellow'; return
+                    }
+                    $already = npm list -g --depth=0 2>$null | Select-String ([regex]::Escape($Id))
+                    if ($already) { Log "  --  $Name ya instalado" 'dim'; return }
+                    Log "  >>  Instalando $Name (npm)..." 'cyan'
+                    npm install -g $Id 2>&1 | Out-Null
+                }
+                Log "  OK  $Name" 'green'
+            } catch { Log "  !!  $Name : $($_.Exception.Message)" 'yellow' }
+        }
+
+        function Deploy {
+            param([string]$src, [string]$dst)
+            try {
+                New-Item -ItemType Directory (Split-Path $dst) -Force | Out-Null
+                Copy-Item $src $dst -Force
+                Log "  OK  $(Split-Path $dst -Leaf)" 'green'
+            } catch { Log "  !!  $(Split-Path $dst -Leaf): $($_.Exception.Message)" 'yellow' }
+        }
+
+        try {
+            Log '══ PowerShell 7' 'cyan'
+            Install-Pkg 'Microsoft.PowerShell' 'PowerShell 7' 'winget'
+
+            Log '══ Dependencias' 'cyan'
+            Install-Pkg 'Git.Git'                  'Git'            'winget'
+            Install-Pkg 'GitHub.cli'               'GitHub CLI'     'winget'
+            Install-Pkg 'JanDeDobbeleer.OhMyPosh' 'oh-my-posh'    'winget'
+            Install-Pkg 'ImageMagick.Q16-HDRI'    'ImageMagick'   'winget'
+            Install-Pkg 'Fastfetch-cli.Fastfetch' 'fastfetch'     'winget'
+            if ($selAI | Where-Object { $_.type -eq 'npm' }) {
+                Install-Pkg 'OpenJS.NodeJS.LTS' 'Node.js LTS' 'winget'
+            }
+
+            Log '══ Apps esenciales' 'cyan'
+            Install-Pkg 'VideoLAN.VLC'               'VLC'      'winget'
+            Install-Pkg 'Microsoft.VisualStudioCode' 'VS Code'  'winget'
+            Install-Pkg 'M2Team.NanaZip'             'NanaZip'  'winget'
+
+            if ($selBrowsers.Count -gt 0) {
+                Log '══ Navegadores' 'cyan'
+                foreach ($b in $selBrowsers) { Install-Pkg $b.id $b.label 'winget' }
+            }
+            if ($selAI.Count -gt 0) {
+                Log '══ Herramientas AI' 'cyan'
+                foreach ($a in $selAI) { Install-Pkg $a.id $a.label $a.type }
+            }
+
+            Log '══ Módulos PSGallery' 'cyan'
+            foreach ($mod in @('Terminal-Icons','ps2exe')) {
+                if (Get-Module -ListAvailable -Name $mod) { Log "  --  $mod ya instalado" 'dim'; continue }
+                Install-Module -Name $mod -Scope CurrentUser -Force -SkipPublisherCheck
+                Log "  OK  $mod" 'green'
+            }
+
+            Log '══ FiraCode Nerd Font' 'cyan'
+            $fontDst = "$env:LOCALAPPDATA\Microsoft\Windows\Fonts\FiraCodeNerdFont-Regular.ttf"
+            if (Test-Path $fontDst) {
+                Log "  --  FiraCode Nerd Font ya instalada" 'dim'
+            } else {
+                $zip = "$env:TEMP\FC_NF.zip"; $dir = "$env:TEMP\FC_NF"
+                Invoke-WebRequest 'https://github.com/ryanoasis/nerd-fonts/releases/latest/download/FiraCode.zip' `
+                    -OutFile $zip -UseBasicParsing
+                Expand-Archive $zip $dir -Force
+                $ttf = Get-ChildItem "$dir\*.ttf" | Where-Object { $_.Name -like '*Regular*' } | Select-Object -First 1
+                if ($ttf) {
+                    New-Item -ItemType Directory "$env:LOCALAPPDATA\Microsoft\Windows\Fonts" -Force | Out-Null
+                    Copy-Item $ttf.FullName $fontDst -Force
+                    New-ItemProperty 'HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts' `
+                        -Name 'FiraCode Nerd Font Regular (TrueType)' -Value $fontDst -PropertyType String -Force | Out-Null
+                    Log "  OK  FiraCode Nerd Font Regular" 'green'
+                }
+                Remove-Item $zip,$dir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+
+            Log '══ Configuración' 'cyan'
+            New-Item -ItemType Directory $psDir,$modDir,$csDir,"$env:APPDATA\fastfetch" -Force | Out-Null
+            if (Test-Path $profilePath) {
+                Copy-Item $profilePath "$profilePath.bak_$(Get-Date -Format 'yyyyMMdd_HHmmss')" -Force
+                Log "  --  Backup de perfil anterior creado" 'dim'
+            }
+            @(
+                @("$repoBase\powershell\profile.ps1",                $profilePath)
+                @("$repoBase\powershell\powershell.config.json",     "$psDir\powershell.config.json")
+                @("$repoBase\powershell\themes\night-owl.omp.json",  "$psDir\night-owl.omp.json")
+                @("$repoBase\powershell\themes\quick-term.omp.json", "$psDir\quick-term.omp.json")
+                @("$repoBase\powershell\themes\mytheme.omp.json",    "$psDir\.mytheme.omp.json")
+                @("$repoBase\fastfetch\config.jsonc",                "$env:APPDATA\fastfetch\config.jsonc")
+            ) | ForEach-Object { Deploy $_[0] $_[1] }
+
+            if ($selScripts.Count -gt 0) {
+                Log '══ Scripts personales' 'cyan'
+                foreach ($s in $selScripts) { Deploy "$repoBase\scripts\$($s.name)" "$csDir\$($s.name)" }
+            }
+
+            $imgConvSrc = "$repoBase\modules\ImgConv"
+            if (Test-Path $imgConvSrc) {
+                Log '══ Módulo ImgConv' 'cyan'
+                $dst = "$modDir\ImgConv"
+                New-Item -ItemType Directory $dst -Force | Out-Null
+                Get-ChildItem $imgConvSrc | ForEach-Object { Deploy $_.FullName "$dst\$($_.Name)" }
+            }
+
+            if ($runDebloat) {
+                Log '══ Win11Debloat (Raphire) — iniciando...' 'cyan'
+                & ([scriptblock]::Create((irm 'https://debloat.raphi.re/')))
+            }
+
+            Log '' 'default'
+            Log '✅  Setup completado. Reinicia Windows Terminal.' 'green'
+        } catch {
+            Log "❌  Error inesperado: $($_.Exception.Message)" 'red'
+        }
+        $sync.Done = $true
+    }
+
+    $rs = [runspacefactory]::CreateRunspace()
+    $rs.ApartmentState = 'STA'; $rs.ThreadOptions = 'ReuseThread'; $rs.Open()
+    $ps = [powershell]::Create(); $ps.Runspace = $rs
+    [void]$ps.AddScript($installBlock)
+    [void]$ps.AddArgument($sync)
+    [void]$ps.AddArgument($RepoBase)
+    [void]$ps.AddArgument($selBrowsers)
+    [void]$ps.AddArgument($selAI)
+    [void]$ps.AddArgument($selScripts)
+    [void]$ps.AddArgument($runDebloat)
+    [void]$ps.AddArgument($psDir)
+    [void]$ps.AddArgument($csDir)
+    [void]$ps.AddArgument($modDir)
+    [void]$ps.AddArgument($profile_)
+    $handle = $ps.BeginInvoke()
+
+    # Timer: bombea el log del runspace a la UI sin bloquear
+    $timer = New-Object Windows.Forms.Timer; $timer.Interval=120
+    $timer.Add_Tick({
+        [string]$item = $null
+        while ($sync.Log.TryDequeue([ref]$item)) { Append-Log $item }
+        if ($sync.Done) {
+            $timer.Stop()
+            try { $ps.EndInvoke($handle) } catch {}
+            $rs.Close()
+            $btnStart.Text='✅  Completado'; $btnStart.BackColor=$cGreen
+            $btnCancel.Enabled=$true; $btnCancel.Text='Cerrar'
+        }
+    })
+    $timer.Start()
+})
+
+# ── Mostrar formulario ────────────────────────────────────────────────────────
+[void]$form.ShowDialog()
