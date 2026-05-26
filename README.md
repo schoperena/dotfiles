@@ -6,11 +6,17 @@ Configuración personal de PowerShell: prompt, módulos, temas y scripts.
 
 No necesitas `git`. Abre **Windows PowerShell** (el que viene con Windows 11) y ejecuta:
 
+**Consola (compatible con PS 5.1 y PS 7):**
 ```powershell
 & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/schoperena/schoperena-win-setup/main/setup.ps1')))
 ```
 
-El script detecta automáticamente si estás en PowerShell 5.1, instala PowerShell 7 con `winget` y se relanza en él.
+**GUI 1280×720 (requiere PS 7):**
+```powershell
+& ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/schoperena/schoperena-win-setup/main/setup-gui.ps1')))
+```
+
+El script de consola detecta automáticamente si estás en PowerShell 5.1, instala PowerShell 7 con `winget` y se relanza en él. La versión GUI asume PS 7 ya instalado.
 
 Si prefieres clonar el repo primero:
 
