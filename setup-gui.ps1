@@ -61,15 +61,15 @@ $scriptItems = @(
 
 # ── Layout ────────────────────────────────────────────────────────────────────
 $M       = 20       # margen lateral
-$TOP     = 75       # y inicio contenido
+$TOP     = 92       # y inicio contenido
 $LWIDTH  = 340      # ancho panel izquierdo
 $GAP     = 14       # separación entre paneles
 $RBASE   = $M + $LWIDTH + $GAP                  # x panel scripts = 374
 $RWIDTH  = 1280 - $RBASE - $M                   # ancho panel scripts = 886
-$CH      = 455      # altura zona contenido
-$LOG_Y   = $TOP + $CH + 8                        # = 538
+$CH      = 443      # altura zona contenido
+$LOG_Y   = $TOP + $CH + 8                        # = 543
 $LOG_H   = 108
-$BTN_Y   = $LOG_Y + $LOG_H + 8                  # = 654
+$BTN_Y   = $LOG_Y + $LOG_H + 8                  # = 659
 
 # ── Helpers de control ────────────────────────────────────────────────────────
 function New-Lbl {
@@ -132,11 +132,25 @@ $form.MaximizeBox     = $false
 
 # ── Header ────────────────────────────────────────────────────────────────────
 $pHeader = New-Object Windows.Forms.Panel
-$pHeader.Location='0,0'; $pHeader.Size='1280,65'; $pHeader.BackColor=$cPanel
+$pHeader.Location='0,0'; $pHeader.Size='1280,90'; $pHeader.BackColor=$cPanel
 $form.Controls.Add($pHeader)
-New-Lbl 'schoperena-win-setup' 20 9 600 34 $fTitle $cAccent $pHeader | Out-Null
-New-Lbl 'Setup interactivo de entorno personal Windows' 23 43 700 18 $fNorm $cTxtDim $pHeader | Out-Null
-New-HLine 65 1280 $form | Out-Null
+
+# Logo ASCII "SCH" a la izquierda
+$asciiArt = " ___  ___ _  _ `r`n/ __>/ __| || |`r`n\__ \| (__ | >< |`r`n<___/\___|_||_|"
+$lblAscii = New-Object Windows.Forms.Label
+$lblAscii.Text      = $asciiArt
+$lblAscii.Location  = '18,8'
+$lblAscii.Size      = '160,64'
+$lblAscii.Font      = New-Object Drawing.Font('Consolas', 8, [Drawing.FontStyle]::Bold)
+$lblAscii.ForeColor = [Drawing.Color]::FromArgb(0, 140, 168)   # cyan apagado
+$lblAscii.BackColor = [Drawing.Color]::Transparent
+$pHeader.Controls.Add($lblAscii)
+
+# Título y subtítulo a la derecha del logo
+New-Lbl 'WIN SETUP' 184 14 500 42 (New-Object Drawing.Font('Segoe UI',22,[Drawing.FontStyle]::Bold)) $cAccent $pHeader | Out-Null
+New-Lbl 'Setup interactivo de entorno personal Windows' 186 58 700 18 $fSmall $cTxtDim $pHeader | Out-Null
+
+New-HLine 90 1280 $form | Out-Null
 
 # ── Panel izquierdo ───────────────────────────────────────────────────────────
 $pLeft = New-Object Windows.Forms.Panel
