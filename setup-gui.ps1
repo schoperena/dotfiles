@@ -336,7 +336,7 @@ $logColors = @{
     red    = $cRed;   dim    = $cTxtDim; default = $cTxt
 }
 
-function Append-Log {
+$appendLog = {
     param([string]$raw)
     if ($raw -match '^\[(\w+)\](.*)') {
         $col  = if ($logColors.ContainsKey($matches[1])) { $logColors[$matches[1]] } else { $cTxt }
@@ -539,7 +539,7 @@ $btnStart.Add_Click({
     $timer = New-Object Windows.Forms.Timer; $timer.Interval=120
     $timer.Add_Tick({
         [string]$item = $null
-        while ($sync.Log.TryDequeue([ref]$item)) { Append-Log $item }
+        while ($sync.Log.TryDequeue([ref]$item)) { & $appendLog $item }
         if ($sync.Done) {
             $timer.Stop()
             try { $ps.EndInvoke($handle) } catch {}
@@ -547,47 +547,30 @@ $btnStart.Add_Click({
             $btnStart.Text='✅  Completado'; $btnStart.BackColor=$cGreen
             $btnCancel.Enabled=$true; $btnCancel.Text='Cerrar'
         }
-    })
+    }.GetNewClosure())
     $timer.Start()
 })
 
-# ── Check async de paquetes ya instalados ────────────────────────────────────
-$syncCheck = [hashtable]::Synchronized(@{ WingetOut=''; NpmOut=''; Done=$false })
-$checkBlock = {
-    param($s, $bItems, $aItems)
-    try { $s.WingetOut = (winget list --accept-source-agreements 2>&1) -join "`n" } catch {}
-    try {
-        if (Get-Command npm -ErrorAction SilentlyContinue) {
-            $s.NpmOut = (npm list -g --depth=0 2>$null) -join "`n"
-        }
-    } catch {}
-    $s.Done = $true
-}
-$rsCheck = [runspacefactory]::CreateRunspace(); $rsCheck.Open()
-$psCheck = [powershell]::Create(); $psCheck.Runspace = $rsCheck
-[void]$psCheck.AddScript($checkBlock).AddArgument($syncCheck).AddArgument($browserItems).AddArgument($aiItems)
-[void]$psCheck.BeginInvoke()
+# ── Detección síncrona de paquetes instalados (antes de mostrar el form) ─────
+Write-Host '  Detectando paquetes instalados...' -ForegroundColor DarkCyan
+$_wl = ''; $_nl = ''
+try { $_wl = (winget list --accept-source-agreements 2>&1) -join "`n" } catch {}
+try {
+    if (Get-Command npm -ErrorAction SilentlyContinue) {
+        $_nl = (npm list -g --depth=0 2>$null) -join "`n"
+    }
+} catch {}
 
-$timerCheck = New-Object Windows.Forms.Timer; $timerCheck.Interval = 250
-$timerCheck.Add_Tick({
-    if (-not $syncCheck.Done) { return }
-    $timerCheck.Stop()
-    $wl = $syncCheck.WingetOut
-    $nl = $syncCheck.NpmOut
-    for ($i = 0; $i -lt $browserItems.Count; $i++) {
-        if ($wl -match [regex]::Escape($browserItems[$i].id)) {
-            [void]$navInstalledIdx.Add($i); $clbNav.SetItemChecked($i, $true)
-        }
+for ($i = 0; $i -lt $browserItems.Count; $i++) {
+    if ($_wl -match [regex]::Escape($browserItems[$i].id)) {
+        [void]$navInstalledIdx.Add($i); $clbNav.SetItemChecked($i, $true)
     }
-    for ($i = 0; $i -lt $aiItems.Count; $i++) {
-        $found = if ($aiItems[$i].type -eq 'winget') { $wl -match [regex]::Escape($aiItems[$i].id) }
-                 else { $nl -match [regex]::Escape($aiItems[$i].id) }
-        if ($found) { [void]$aiInstalledIdx.Add($i); $clbAI.SetItemChecked($i, $true) }
-    }
-    $clbNav.Refresh(); $clbAI.Refresh()
-    try { $rsCheck.Close() } catch {}
-})
-$timerCheck.Start()
+}
+for ($i = 0; $i -lt $aiItems.Count; $i++) {
+    $found = if ($aiItems[$i].type -eq 'winget') { $_wl -match [regex]::Escape($aiItems[$i].id) }
+             else { $_nl -match [regex]::Escape($aiItems[$i].id) }
+    if ($found) { [void]$aiInstalledIdx.Add($i); $clbAI.SetItemChecked($i, $true) }
+}
 
 # ── Mostrar formulario ────────────────────────────────────────────────────────
 [void]$form.ShowDialog()
